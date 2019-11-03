@@ -1,9 +1,8 @@
-const run = () => {
+const script = () => {
     const rowsLength = 4, columnsLength = 8
 
     let previousUtilities, 
         currentUtilities = Array(4).fill().map(() => Array(8).fill(0)), 
-        hash = Array(4).fill().map(() => Array(8).fill(0))
         maxUtility = 0
 
     let iteration = 1
@@ -26,12 +25,18 @@ const run = () => {
         let matrix = Array(rowsLength).fill().map(() => Array(columnsLength).fill().map(_ => {
             return { reward: 0, cost: -0.1, restart: false }
         }));
-        for(let position of PITPositions)
+        for(let position of PITPositions){
             matrix[position.row][position.column] = { reward: -100, cost: -0.1, restart: true }
-        for(let position of GoldPositions)
+            document.getElementsByClassName("col")[position.row * columnsLength + position.column].style.backgroundColor = 'rgb(128,128,128)'
+        }
+        for(let position of GoldPositions){
             matrix[position.row][position.column] = { reward: 100, cost: -0.1, restart: true }
-        for(let position of MonsterPositions)
-            matrix[position.row][position.column] = { reward: -50, cost: -0.1, restart: true }        
+            document.getElementsByClassName("col")[position.row * columnsLength + position.column].style.backgroundColor = 'yellow'
+        }
+        for(let position of MonsterPositions){
+            matrix[position.row][position.column] = { reward: -50, cost: -0.1, restart: true }       
+            document.getElementsByClassName("col")[position.row * columnsLength + position.column].style.backgroundColor = 'rgb(255,99,71)'
+        }
         return matrix;
     })()
 
@@ -43,44 +48,26 @@ const run = () => {
             return { row: newRow, column: newColumn }
     }
 
-    const drawState = ( row, column ) => {
+    const bestMovement = ( row, column ) => {
         const leftMovement = move( row, column, 0, -1 ),
             rightMovement = move( row, column, 0, 1),
-            upMovement = move( row, column, 1, 0),  
-            downMovement = move( row, column, -1, 0)
+            upMovement = move( row, column, -1, 0),  
+            downMovement = move( row, column, 1, 0)
 
-        let maxNeighborsUtility = currentUtilities[row][column], draw = { row, column }
-        if(currentUtilities[leftMovement.row][leftMovement.column] >= maxNeighborsUtility){
-            draw = leftMovement
-            maxNeighborsUtility = currentUtilities[leftMovement.row][leftMovement.column]
-        }
+        let maxNeighborsUtility = currentUtilities[leftMovement.row][leftMovement.column], movement = 'LEFT'
         if(currentUtilities[rightMovement.row][rightMovement.column] >= maxNeighborsUtility){
-            draw = rightMovement
+            movement = 'RIGHT'
             maxNeighborsUtility = currentUtilities[rightMovement.row][rightMovement.column]
         }
         if(currentUtilities[upMovement.row][upMovement.column] >= maxNeighborsUtility){
-            draw = upMovement
+            movement = 'UP'
             maxNeighborsUtility = currentUtilities[upMovement.row][upMovement.column]
         }    
         if(currentUtilities[downMovement.row][downMovement.column] >= maxNeighborsUtility){
-            draw = downMovement
+            movement = 'DOWN'
             maxNeighborsUtility = currentUtilities[downMovement.row][downMovement.column]
         }
-        if( hash[draw.row][draw.column] == 0 && document.getElementsByClassName("col")[draw.row * columnsLength + draw.column].style.backgroundColor === `rgba(255, 0, 0, 0)`){
-            hash[draw.row][draw.column] = 1
-            const color = `rgba(255, 0, 0, ${currentUtilities[row][column]/maxUtility})`
-            document.getElementsByClassName("col")[row * columnsLength + column].style.backgroundColor = color
-            setTimeout(() => {
-                drawState(draw.row, draw.column)
-            }, 200);
-        } else {
-            if(iteration < 1000)
-                setTimeout(() => {
-                    updateState()
-                }, 200);
-            else
-                document.getElementById("iteration").textContent = `iteration: ${iteration}, FINISHED!`
-        }
+        return movement
     }
 
     const updateState = () => {
@@ -91,8 +78,8 @@ const run = () => {
             for(let column=0; column<columnsLength; column++) {
                 const leftMovement = move( row, column, 0, -1 ),
                     rightMovement = move( row, column, 0, 1),
-                    upMovement = move( row, column, 1, 0),
-                    downMovement = move( row, column, -1, 0)
+                    upMovement = move( row, column, -1, 0),
+                    downMovement = move( row, column, 1, 0)
                     
                 currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
                     reward[row][column].reward + reward[row][column].cost +
@@ -121,13 +108,31 @@ const run = () => {
                 maxUtility = Math.max(maxUtility, currentUtilities[row][column])
             }            
 
-        document.getElementById("iteration").textContent = `iteration: ${iteration}`
-        iteration += 1
+        let updates = 0, bestMov
         for(let row=0; row<rowsLength; row++)
-            for(let column=0; column<columnsLength; column++)
-                document.getElementsByClassName("col")[row * columnsLength + column].style.backgroundColor = `rgba(255, 0, 0, 0)`
-        hash = Array(4).fill().map(() => Array(8).fill(0))        
-        drawState( Math.floor(Math.random() * rowsLength), Math.floor(Math.random() * columnsLength) ) 
+            for(let column=0; column<columnsLength; column++){
+                bestMov = bestMovement(row, column)
+                if(document.getElementsByClassName("col")[row * columnsLength + column].textContent !== bestMov){
+                    updates += 1
+                    document.getElementsByClassName("col")[row * columnsLength + column].textContent = bestMov
+                }
+            }
+        return updates > 0
     }
-    updateState()
+
+    const run = () => {
+        document.getElementById("iteration").textContent = `iteration ${iteration}`
+        if(!updateState()){
+            document.getElementById("iteration").textContent = `iteration ${iteration} - CONVERGED!`
+            document.getElementById("policy").textContent = `OPTIMAL Markov Decision Process policy`
+        }
+        else {
+            iteration += 1
+            setTimeout(() => {
+                run()
+            }, 1000)
+        }
+    }
+
+    run()
 }
