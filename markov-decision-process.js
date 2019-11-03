@@ -1,9 +1,10 @@
 const script = () => {
-    const rowsLength = 4, columnsLength = 8
+    const rowsLength = 4, columnsLength = 8, learningRate = 0.8
 
-    let previousUtilities, 
+    let previousUtilities = Array(4).fill().map(() => Array(8).fill(0)), 
         currentUtilities = Array(4).fill().map(() => Array(8).fill(0)), 
-        maxUtility = 0
+        maxUtility = 0,
+        delta = 100000
 
     let iteration = 1
 
@@ -24,7 +25,7 @@ const script = () => {
         ]
         let matrix = Array(rowsLength).fill().map(() => Array(columnsLength).fill().map(_ => {
             return { reward: 0, cost: -0.1, restart: false }
-        }));
+        }))
         for(let position of PITPositions){
             matrix[position.row][position.column] = { reward: -100, cost: -0.1, restart: true }
             document.getElementsByClassName("col")[position.row * columnsLength + position.column].style.backgroundColor = 'rgb(128,128,128)'
@@ -37,7 +38,7 @@ const script = () => {
             matrix[position.row][position.column] = { reward: -50, cost: -0.1, restart: true }       
             document.getElementsByClassName("col")[position.row * columnsLength + position.column].style.backgroundColor = 'rgb(255,99,71)'
         }
-        return matrix;
+        return matrix
     })()
 
     const move = ( row, column, dx, dy ) => {
@@ -48,7 +49,10 @@ const script = () => {
             return { row: newRow, column: newColumn }
     }
 
-    const bestMovement = ( row, column ) => {
+    const bestMovement = ( row, column ) => {        
+        if(reward[row][column].restart)
+            return 'RESTART'
+
         const leftMovement = move( row, column, 0, -1 ),
             rightMovement = move( row, column, 0, 1),
             upMovement = move( row, column, -1, 0),  
@@ -75,54 +79,55 @@ const script = () => {
         currentUtilities = Array(4).fill().map(() => Array(8).fill(0))
         maxUtility = 0
         for(let row=0; row<rowsLength; row++)
-            for(let column=0; column<columnsLength; column++) {
-                const leftMovement = move( row, column, 0, -1 ),
-                    rightMovement = move( row, column, 0, 1),
-                    upMovement = move( row, column, -1, 0),
-                    downMovement = move( row, column, 1, 0)
-                    
-                currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
-                    reward[row][column].reward + reward[row][column].cost +
-                    0.7 * previousUtilities[upMovement.row][upMovement.column] +
-                    0.2 * previousUtilities[leftMovement.row][leftMovement.column] +
-                    0.1 * previousUtilities[rightMovement.row][rightMovement.column]
-                )
-                currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
-                    reward[row][column].reward + reward[row][column].cost +
-                    0.7 * previousUtilities[leftMovement.row][leftMovement.column] +
-                    0.2 * previousUtilities[downMovement.row][downMovement.column] +
-                    0.1 * previousUtilities[upMovement.row][upMovement.column]
-                )
-                currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
-                    reward[row][column].reward + reward[row][column].cost +
-                    0.7 * previousUtilities[downMovement.row][downMovement.column] +
-                    0.2 * previousUtilities[rightMovement.row][rightMovement.column] +
-                    0.1 * previousUtilities[leftMovement.row][leftMovement.column]
-                )
-                currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
-                    reward[row][column].reward + reward[row][column].cost +
-                    0.7 * previousUtilities[leftMovement.row][leftMovement.column] +
-                    0.2 * previousUtilities[downMovement.row][downMovement.column] +
-                    0.1 * previousUtilities[upMovement.row][upMovement.column]
-                )
-                maxUtility = Math.max(maxUtility, currentUtilities[row][column])
-            }            
-
-        let updates = 0, bestMov
-        for(let row=0; row<rowsLength; row++)
             for(let column=0; column<columnsLength; column++){
-                bestMov = bestMovement(row, column)
-                if(document.getElementsByClassName("col")[row * columnsLength + column].textContent !== bestMov){
-                    updates += 1
-                    document.getElementsByClassName("col")[row * columnsLength + column].textContent = bestMov
-                }
+                if(reward[row][column].restart){
+                    currentUtilities[row][column] = reward[row][column].reward + reward[row][column].cost +
+                    learningRate * (previousUtilities.flat().reduce((a,b) => a + b, 0) / previousUtilities.flat().length)
+                } else {
+                    const leftMovement = move( row, column, 0, -1 ),
+                        rightMovement = move( row, column, 0, 1),
+                        upMovement = move( row, column, -1, 0),
+                        downMovement = move( row, column, 1, 0)
+                        
+                    currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
+                        reward[row][column].reward + reward[row][column].cost +
+                        learningRate * (0.7 * previousUtilities[upMovement.row][upMovement.column] +
+                        0.2 * previousUtilities[leftMovement.row][leftMovement.column] +
+                        0.1 * previousUtilities[rightMovement.row][rightMovement.column])
+                    )
+                    currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
+                        reward[row][column].reward + reward[row][column].cost +
+                        learningRate * (0.7 * previousUtilities[leftMovement.row][leftMovement.column] +
+                        0.2 * previousUtilities[downMovement.row][downMovement.column] +
+                        0.1 * previousUtilities[upMovement.row][upMovement.column])
+                    )
+                    currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
+                        reward[row][column].reward + reward[row][column].cost +
+                        learningRate * (0.7 * previousUtilities[downMovement.row][downMovement.column] +
+                        0.2 * previousUtilities[rightMovement.row][rightMovement.column] +
+                        0.1 * previousUtilities[leftMovement.row][leftMovement.column])
+                    )
+                    currentUtilities[row][column] = Math.max(currentUtilities[row][column], 
+                        reward[row][column].reward + reward[row][column].cost +
+                        learningRate * (0.7 * previousUtilities[leftMovement.row][leftMovement.column] +
+                        0.2 * previousUtilities[downMovement.row][downMovement.column] +
+                        0.1 * previousUtilities[upMovement.row][upMovement.column])
+                    )
+                }            
+                maxUtility = Math.max(maxUtility, currentUtilities[row][column])
             }
-        return updates > 0
+
+        for(let row=0; row<rowsLength; row++)
+            for(let column=0; column<columnsLength; column++)
+                document.getElementsByClassName("col")[row * columnsLength + column].textContent = bestMovement(row, column)
+        delta = Math.round(100 * (currentUtilities.flat().reduce((a,b) => a + b, 0) - previousUtilities.flat().reduce((a,b) => a + b, 0))) / 100                
     }
 
     const run = () => {
+        updateState()
         document.getElementById("iteration").textContent = `iteration ${iteration}`
-        if(!updateState()){
+        document.getElementById("delta").textContent = `Sum Utility(current state) - Sum Utility(previous state) = ${delta}`
+        if(delta == 0){
             document.getElementById("iteration").textContent = `iteration ${iteration} - CONVERGED!`
             document.getElementById("policy").textContent = `OPTIMAL Markov Decision Process policy`
             setTimeout(() => {
@@ -133,7 +138,7 @@ const script = () => {
             iteration += 1
             setTimeout(() => {
                 run()
-            }, 1000)
+            }, 500)
         }
     }
 
