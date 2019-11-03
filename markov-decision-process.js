@@ -130,9 +130,6 @@ const script = () => {
         if(delta == 0){
             document.getElementById("iteration").textContent = `iteration ${iteration} - CONVERGED!`
             document.getElementById("policy").textContent = `OPTIMAL Markov Decision Process policy`
-            setTimeout(() => {
-                script()
-            }, 5000)
         }
         else {
             iteration += 1
