@@ -74,7 +74,7 @@ const run = () => {
                 drawState(draw.row, draw.column)
             }, 200);
         } else {
-            if(iteration < 200)
+            if(iteration < 1000)
                 setTimeout(() => {
                     updateState()
                 }, 200);
